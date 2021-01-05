@@ -1,0 +1,8 @@
+prefix=/home/ubuntu/edubot_ws/install
+
+Name: edubot
+Description: Description of edubot
+Version: 0.0.0
+Cflags: 
+Libs: -L${prefix}/lib 
+Requires: 

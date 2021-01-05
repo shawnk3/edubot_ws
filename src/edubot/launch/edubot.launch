@@ -1,0 +1,4 @@
+<launch>
+  <include file="$(find edubot)/launch/includes/teleop.launch.xml" />
+  <include file="$(find edubot)/launch/includes/control.launch.xml" />
+</launch>

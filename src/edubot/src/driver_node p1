@@ -1,0 +1,95 @@
+#!/usr/bin/env python
+
+import rospy
+from std_msgs.msg import String
+
+import RPi.GPIO as GPIO
+import time
+
+GPIO.setmode(GPIO.BCM)
+GPIO.setwarnings(False)
+
+AFor = 10
+ABack = 9
+BFor = 8
+BBack = 7
+
+freq = 20
+duty = 30
+stop = 0
+
+GPIO.setup(AFor,GPIO.OUT)
+GPIO.setup(ABack,GPIO.OUT)
+GPIO.setup(BFor,GPIO.OUT)
+GPIO.setup(BBack,GPIO.OUT)
+
+pwmAFor = GPIO.PWM(AFor,freq)
+pwmABack = GPIO.PWM(ABack,freq)
+pwmBFor = GPIO.PWM(BFor,freq)
+pwmBBack = GPIO.PWM(BBack,freq)
+
+pwmAFor.start(stop)
+pwmABack.start(stop)
+pwmBFor.start(stop)
+pwmBBack.start(stop)
+
+def stops():
+    pwmAFor.ChangeDutyCycle(stop)
+    pwmABack.ChangeDutyCycle(stop)
+    pwmBFor.ChangeDutyCycle(stop)
+    pwmBBack.ChangeDutyCycle(stop)
+
+def forwards():
+    pwmAFor.ChangeDutyCycle(stop)
+    pwmABack.ChangeDutyCycle(duty)
+    pwmBFor.ChangeDutyCycle(stop)
+    pwmBBack.ChangeDutyCycle(duty)
+
+def backwards():
+    pwmAFor.ChangeDutyCycle(duty)
+    pwmABack.ChangeDutyCycle(stop)
+    pwmBFor.ChangeDutyCycle(duty)
+    pwmBBack.ChangeDutyCycle(stop)
+
+def right():
+    pwmAFor.ChangeDutyCycle(stop)
+    pwmABack.ChangeDutyCycle(duty)
+    pwmBFor.ChangeDutyCycle(duty)
+    pwmBBack.ChangeDutyCycle(stop) 
+
+def left():
+    pwmAFor.ChangeDutyCycle(duty)
+    pwmABack.ChangeDutyCycle(stop)
+    pwmBFor.ChangeDutyCycle(stop)
+    pwmBBack.ChangeDutyCycle(duty)
+
+# Message handler
+def CommandCallback(commandMessage):
+    command = commandMessage.data
+    if command == 'forwards':
+        print('Moving forwards')
+        forwards()
+    elif command == 'backwards':
+        print('Moving backwards')
+        backwards()
+    elif command == 'left':
+        print('Turning left')
+        left()
+    elif command == 'right':
+        print('Turning right')
+        right()
+    elif command == 'stop':
+        print('Stopping')
+        stops()
+    else:
+        print('Unknown command, stopping instead')
+        stops()
+
+rospy.init_node('driver')
+
+rospy.Subscriber('command', String, CommandCallback)
+
+rospy.spin()
+print('Shutting down: stopping motors')
+stops()
+GPIO.cleanup()

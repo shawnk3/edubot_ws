@@ -1,0 +1,2 @@
+edubot:opencv:teleop_twist_joy
+-DCATKIN_DEVEL_PREFIX=/home/ubuntu/edubot_ws/devel -DCMAKE_INSTALL_PREFIX=/home/ubuntu/edubot_ws/install -G Unix Makefiles

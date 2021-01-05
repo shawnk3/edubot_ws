@@ -1,0 +1,103 @@
+#!/usr/bin/env python
+
+import rospy
+from geometry_msgs.msg import Twist
+
+import RPi.GPIO as GPIO
+
+GPIO.setmode(GPIO.BCM)
+GPIO.setwarnings(False)
+
+_freq = 20
+
+def _clip(value, minimum, maximum):
+    """Ensure value is between minimum and maximum"""
+
+    if value < minimum:
+        return minimum
+    if value > maximum:
+        return maximum
+
+    return value
+
+
+class Motor:
+
+    def __init__(self,forward_pin,backward_pin):
+        GPIO.setup(forward_pin,GPIO.OUT)
+        GPIO.setup(backward_pin,GPIO.OUT)
+
+        self.forward_pwm = GPIO.PWM(forward_pin,_freq)
+        self.backward_pwm = GPIO.PWM(backward_pin,_freq)
+
+
+    def move(self,speed_percent):
+        speed = _clip(abs(speed_percent),0,100)
+
+        #positive moves forward, negative moves backward
+        if speed_percent < 0:
+            self.backward_pwm.start(speed)
+            self.forward_pwm.start(0)
+        else:
+          self.forward_pwm.start(speed)
+          self.backward_pwm.start(0)  
+
+class Driver:
+
+    def __init__(self):
+        rospy.init_node('driver')
+        
+        self._last_received = rospy.get_time()
+        self._timeout = rospy.get_param('-timeout', 2)
+        self._rate = rospy.get_param('-rate', 10)
+        self._max_speed = rospy.get_param('max_speed', 0.5)
+        self._wheel_base = rospy.get_param('-wheel_base', 0.123825)
+
+
+
+        self._left_motor = Motor(9,10)
+        self._right_motor = Motor(7,8)
+        self._left_percent = 0
+        self._right_percent = 0 
+
+        rospy.Subscriber('cmd_vel', Twist, self._velocity_received_callback)
+
+
+    def _velocity_received_callback(self,message):
+        """handle new command message"""
+        self._last_received = rospy.get_time()
+
+        #extract linear and angular parameters
+
+        linear = message.linear.x
+        angular = message.angular.z
+
+        left_speed = linear -  angular * (self._wheel_base / 2)
+        right_speed = linear + angular * (self._wheel_base / 2)
+
+
+        #convert m/s to percent of max speed
+        #and then we can input duty cycle for motors
+
+        self._left_percent = 100 * (left_speed / self._max_speed)
+        self._right_percent = 100 * (right_speed / self._max_speed)
+
+    def run(self):
+        """control loop for driver"""
+        rate = rospy.Rate(self._rate)
+        while not rospy.is_shutdown():
+            delay = rospy.get_time() - self._last_received
+            if delay < self._timeout:
+                self._left_motor.move(self._left_percent)
+                self._right_motor.move(self._right_percent)
+            else:
+                self._left_motor.move(0)
+                self._right_motor.move(0)
+
+            rate.sleep()
+
+
+#main functionality
+driver = Driver()
+driver.run()
+GPIO.cleanup()
